@@ -4,16 +4,20 @@
 [![GitHub license](https://img.shields.io/github/license/kalcao/TelementryDiscordLib)](https://github.com/kalcao/TelementryDiscordLib)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue)](https://www.python.org/)
 
+[![한글 버전](https://img.shields.io/badge/%ED%95%9C%EA%B8%80%20%EB%B2%84%EC%A0%84-%EB%B3%B4%EA%B8%B0-brightgreen)](README_ko.md)
+
 **TelementryDiscordLib** sends telementry data to discord in order to avoid being flagged.
 
 Supports: presence updates, profile edits, guild joins, and member scraping.
 
-> **Disclaimer**: Only for research/education only. I'm not responsible for any misuse, consequences, or account actions resulting from your use of this library.
+> **Disclaimer**: Only for research/education only. **The author assumes no responsibility for any misuse, consequences, or account actions resulting from your use of this library.**
+
+> Don't sell this open-source project. Shame on you if you do.
 
 ## Risky Actions
 
 | Action             | Safe |
-|--------------------|------------|
+|--------------------|------|
 | **Presence Updates** | ✅ |
 | **Profile Edits**  | ✅ |
 | **Guild Joins**    | ✅ |
@@ -54,8 +58,20 @@ asyncio.run(main())
 
 Fork → Branch → PR. Issues are welcome
 
+Contact: @inxtagram on discord
+
 ## License
 
 [MIT](LICENSE)
 
 **[Star on GitHub](https://github.com/kalcao/TelementryDiscordLib)**
+
+## Thanks to
+
+https://luna.gitlab.io/discord-unofficial-docs/
+
+https://github.com/Merubokkusu/Discord-S.C.U.M
+
+http://discord.food/
+
+https://github.com/RazorCap/RazorCap
