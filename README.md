@@ -14,6 +14,11 @@ Supports: presence updates, profile edits, guild joins, and member scraping.
 
 > Don't sell this open-source project. Shame on you if you do.
 
+## Video Demonstration
+https://streamable.com/pw0t1h
+
+https://streamable.com/w42n0l
+
 ## Risky Actions
 
 | Action             | Safe |
