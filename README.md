@@ -58,13 +58,11 @@ asyncio.run(main())
 
 Fork → Branch → PR. Issues are welcome
 
-Contact: @inxtagram on discord
+Contact: `@inxtagram`
 
 ## License
 
 [MIT](LICENSE)
-
-**[Star on GitHub](https://github.com/kalcao/TelementryDiscordLib)**
 
 ## Thanks to
 
