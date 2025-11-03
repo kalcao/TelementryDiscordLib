@@ -31,6 +31,12 @@ https://streamable.com/w42n0l
 
 ## Usage
 
+### Starting Solver
+```bash
+python3 solver.py
+```
+
+### Your first automation with TDLib
 ```python
 from lib.client import DiscordClient
 
