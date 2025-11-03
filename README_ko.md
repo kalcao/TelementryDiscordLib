@@ -22,7 +22,7 @@
 | **프로필 편집**     | ✅ |
 | **길드 가입**       | ✅ |
 | **멤버 스크랩**     | ✅ |
-| **친구 추가**       | ❌ |
+| **친구 추가**       | ✅ |
 
 ## 사용법
 
@@ -53,6 +53,36 @@ async def main():
 
 asyncio.run(main())
 ```
+
+## 업데이트 기록
+<details>
+<summary>눌러서 펼치기</summary>
+
+
+<details>
+<summary>2025-11-03</summary>
+    
+```diff
++ 내장솔버 추가
++ actions.relationship.add() 가 플래그되어 토큰 비활성화시키는 문제 해결.
+- RazorCap은 플래그되어 deprecated하였습니다.
+
+todo: 솔버 해결. 토큰 100개가 캡챠걸리면 브라우저 100개가 소환되는거
+```
+
+</details>
+
+<details>
+<summary>2025-11-01</summary>
+
+```diff
++ TelementryDiscordLib 릴리즈
+```
+
+</details>
+
+</details>
+
 
 ## 기여
 
