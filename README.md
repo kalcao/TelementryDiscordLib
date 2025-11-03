@@ -8,7 +8,7 @@
 
 **TelementryDiscordLib** sends telementry data to discord in order to avoid being flagged.
 
-Supports: presence updates, profile edits, guild joins, adding friend, and member scraping.
+Please ⭐ this repo so I get motivated working on this project! Otherwise I'll stop patching 😊
 
 > **Disclaimer**: Only for research/education only. **The author assumes no responsibility for any misuse, consequences, or account actions resulting from your use of this library.**
 
