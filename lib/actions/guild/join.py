@@ -1,7 +1,7 @@
 import json, uuid
 import asyncio, base64
 from urllib.parse import quote
-from solver import hcaptcha
+import requests  # 추가: Flask 서버에 요청하기 위해
 from lib.science import SciencePayload
 
 class JoinHandler:
@@ -14,6 +14,7 @@ class JoinHandler:
         if science.analytics_token is not None:
             science.reset()
             await science.submit()
+
             science.add('impression_guild_add_landing', external_properties={
                 "impression_type": "modal",
                 "impression_group": "guild_add_flow",
@@ -134,7 +135,7 @@ class JoinHandler:
             science.add('captcha_modal', external_properties={
                 "type": "Captcha Modal"
             })
-            # Captcha required
+
             captcha_sitekey = data.get("captcha_sitekey")
             captcha_rqdata = data.get("captcha_rqdata")
             captcha_rqtoken = data.get("captcha_rqtoken")
@@ -143,17 +144,42 @@ class JoinHandler:
             if not all([captcha_sitekey, captcha_rqdata, captcha_rqtoken, captcha_session_id]):
                 return {"success": False, "error": "Missing captcha fields", "invite_code": invite_code}
             
-            # Create science payload after captcha is solved
             science.add('captcha_event', external_properties={
                 "captcha_event_name": "initial-load",
                 'captcha_flow_key': uuid.uuid4().hex,
                 'captcha_service': 'hcaptcha'
             })
             await science.submit()
-            solver = await hcaptcha.create(captcha_sitekey, "discord.com", "http://127.0.0.1:9080", captcha_rqdata)
-            token = await solver.solve()
+
+            params = {
+                "url": "http://127.0.0.1:9080",
+                "sitekey": captcha_sitekey,
+                "rqdata": captcha_rqdata,
+                'user_agent': "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+            }
+            response = requests.get("http://localhost:5001/solve", params=params)
+            if response.status_code != 200:
+                return {"success": False, "error": "Failed to start solver task", "invite_code": invite_code}
             
-            # Check if captcha solving was successful
+            task_data = response.json()
+            taskid = task_data.get("taskid")
+            if not taskid:
+                return {"success": False, "error": "No task ID returned", "invite_code": invite_code}
+            
+            max_attempts = 60
+            attempt = 0
+            token = None
+            while attempt < max_attempts:
+                await asyncio.sleep(1)
+                status_res = requests.get(f"http://localhost:5001/task/{taskid}")
+                status_data = status_res.json()
+                if status_data.get("status") == "success":
+                    token = status_data.get("uuid")
+                    break
+                elif status_data.get("status") == "failed":
+                    return {"success": False, "error": "Solver failed", "invite_code": invite_code}
+                attempt += 1
+            
             if not token:
                 return {"success": False, "error": "Failed to solve captcha", "invite_code": invite_code}
             
@@ -177,8 +203,7 @@ class JoinHandler:
                  }
             )
             retry_text = retry_res.text
-            print(retry_text)
-            
+                        
             try:
                 retry_data = json.loads(retry_text)
             except json.JSONDecodeError:
