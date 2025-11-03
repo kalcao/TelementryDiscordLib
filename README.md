@@ -43,7 +43,7 @@ async def main():
         status="dnd",
         activities=[{"type": 0, "name": "Python"}]
     )
-
+    await client.actions.relationship.add("1234567890123456789") # user id, "not username" !!
     # Profile
     await client.actions.appearance.change_profile(
         global_name="NewName",
@@ -59,11 +59,40 @@ async def main():
 asyncio.run(main())
 ```
 
+## Updates
+<details>
+<summary>View update history</summary>
+
+
+<details>
+<summary>2025-11-03</summary>
+    
+```diff
++ Intergrated Solver
++ Fixed actions.relationship.add() being flagged and will disable token.
+- RazorCap was deprecated due to flag issue
+
+p.s. I don't like solver. 100 browsers will be launched if 100 tokens faces captcha
+````
+
+</details>
+
+<details>
+<summary>2025-11-01</summary>
+
+```diff
++ Released TelementryDiscordLib
+````
+
+</details>
+
+</details>
+
 ## Contributing
 
 Fork → Branch → PR. Issues are welcome
 
-Contact: `@inxtagram`
+Contact: `@inxtagram` on discord
 
 ## License
 
