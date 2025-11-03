@@ -1,12 +1,12 @@
 import json, uuid, base64, asyncio, time
+import requests  # Added for making HTTP requests to the Flask solver
 from lib.science import SciencePayload
-from solver import hcaptcha
 
 class AddFriend:
     def __init__(self, client):
         self.client = client
     
-    async def add(self, username):
+    async def add(self, userid):
         await self.client.ws.is_ready.wait()
         context = base64.b64encode('{"location":"User Profile"}'.encode()).decode()
         science = self.client.science
@@ -47,7 +47,7 @@ class AddFriend:
         })
         await science.submit()
 
-        res = await self.client._make_request("PUT", 'https://discord.com/api/v9/users/@me/relationships/'+username, json={},headers={"X-Context-Properties": context})
+        res = await self.client._make_request("PUT", 'https://discord.com/api/v9/users/@me/relationships/'+userid, json={},headers={"X-Context-Properties": context})
         res_json = res.json()
         print(res_json)
         if "captcha_key" in res_json:
@@ -73,38 +73,62 @@ class AddFriend:
                 "captcha_flow_key": str(uuid.uuid4())
             })
             await science.submit()
-            solver = await hcaptcha.create(captcha_sitekey, "discord.com", "http://127.0.0.1:9080", captcha_rqdata)
-            token = await solver.solve()
+            
+            solver_url = "http://127.0.0.1:5001/solve"
+            params = {
+                "url": "https://discord.com",
+                "sitekey": captcha_sitekey,
+                "rqdata": captcha_rqdata,
+                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+            }
+            solve_response = requests.get(solver_url, params=params)
+            if solve_response.status_code != 200:
+                return {"success": False, "error": "Failed to start solver"}
+            
+            task_data = solve_response.json()
+            taskid = task_data.get("taskid")
+            if not taskid:
+                return {"success": False, "error": "No task ID from solver"}
+            
+            # Poll for task completion
+            check_url = f"http://127.0.0.1:5001/task/{taskid}"
+            max_attempts = 60  # Adjust timeout as needed
+            for _ in range(max_attempts):
+                check_response = requests.get(check_url)
+                check_data = check_response.json()
+                status = check_data.get("status")
+                if status == "success":
+                    token = check_data.get("uuid")
+                    break
+                elif status == "failed":
+                    return {"success": False, "error": "Solver failed"}
+                await asyncio.sleep(1) 
+            else:
+                return {"success": False, "error": "Solver timeout"}
             
             if not token:
                 return {"success": False, "error": "Failed to solve captcha"}
             
             # Retry join with captcha headers
-            self.client.session.headers.update({
-                'X-Captcha-Key': token,
-                'X-Captcha-Rqdata': captcha_rqdata,
-                'X-Captcha-Rqtoken': captcha_rqtoken,
-                'X-Captcha-Session-Id': captcha_session_id,
-            })
-            
             retry_res = await self.client._make_request(
                 'PUT',
-                f'https://discord.com/api/v9/users/@me/relationships/'+ username,
+                f'https://discord.com/api/v9/users/@me/relationships/'+ userid,
                 json={},
-                headers={"X-Context-Properties": context}
+                headers={"X-Context-Properties": context,
+                         'X-Captcha-Key': token,
+                         'X-Captcha-Rqdata': captcha_rqdata,
+                         'X-Captcha-Rqtoken': captcha_rqtoken,
+                         'X-Captcha-Session-Id': captcha_session_id
+                }
             )
             retry_text = retry_res.text
             print(retry_text)
             
             try:
                 retry_data = json.loads(retry_text)
+                return {"success": True, "userid": userid}
             except json.JSONDecodeError:
-                return {"success": False, "error": "Invalid retry response"}
-            
-            if retry_res.status_code == 204:
                 return {"success": True}
-            else:
-                return {"success": False, "error": retry_data}
         
         if res.status_code == 204:
             return {"success": True}
