@@ -60,6 +60,8 @@ async def main():
     await client.actions.guild.join("invite_code")
     members = await client.actions.guild.scrape("guild_id", "channel_id")
 
+    # Raw Request
+    res = await client._make_request("POST", f"https://discord.com/api/v9/channels/{i}/messages",json={"mobile_network_type": "unknown", "content": "i like animals, but my favorite one is a dog", "tts": False, "flags": 0})
     await client.close()
 
 asyncio.run(main())
