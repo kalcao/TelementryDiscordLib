@@ -86,7 +86,7 @@ async def monitor_token(page, taskid, browser):
             token = await page.evaluate('() => document.querySelector("iframe[data-hcaptcha-response]")?.getAttribute("data-hcaptcha-response")')
             if token and "_" in token:
                 tasks[taskid] = {"status": "success", "uuid": token}
-                print(f"✓ Token found: {token[:50]}...")
+                print(f"{token[:50]}...")
                 try:
                     await browser.close()
                     print(f"Browser closed for task {taskid}")
@@ -191,7 +191,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
         try:
             uuid_result = await asyncio.wait_for(token_task, timeout=60)
         except asyncio.TimeoutError:
-            print(f"Token timeout for task {taskid}")
+            print(f"timeout {taskid}")
             tasks[taskid] = {"status": "failed", "uuid": None}
             uuid_result = None
 
@@ -264,7 +264,6 @@ def solve():
     
     try:
         asyncio.run_coroutine_threadsafe(solve_hcaptcha_async(taskid, sitekey, url, rqdata=rqdata, user_agent=user_agent, proxy_config=proxy_config), loop)
-        print(f"Task {taskid} scheduled for URL: {url}")
     except Exception as e:
         print(f"Error scheduling task {taskid}: {e}")
         tasks[taskid] = {"status": "failed", "uuid": None}
