@@ -1,0 +1,6 @@
+git+https://github.com/coryking/camoufox.git@v142.0.1-bluetaka.25#subdirectory=pythonlib
+tls_client
+typing-extensions
+flask
+requests
+curl_cffi
