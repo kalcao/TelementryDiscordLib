@@ -1,7 +1,4 @@
-import json, uuid
 import asyncio, base64
-from urllib.parse import quote
-from solver import hcaptcha
 from lib.science import SciencePayload
 
 class Leave:
@@ -14,3 +11,4 @@ class Leave:
             return {"success": True}
         else:
             return {"success": False}
+
