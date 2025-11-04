@@ -1,7 +1,5 @@
 import json, uuid, base64, asyncio, time
 from lib.science import SciencePayload
-from solver import hcaptcha
-from lib.science import SciencePayload
 from datetime import datetime
 
 class ProfileChanger:
