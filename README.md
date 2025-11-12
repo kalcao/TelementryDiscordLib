@@ -21,6 +21,8 @@ Account Creation - https://streamable.com/t3mc84 (SOON! ⭐ please <3)
 
 Server joining - https://streamable.com/w42n0l
 
+Sending DM - https://streamable.com/l65heg (not sure if I will commit this)
+
 ## Risky Actions
 
 | Action             | Safe |
@@ -45,7 +47,7 @@ from lib.client import DiscordClient
 async def main():
     client = DiscordClient("your_token")
     await client.init()
-
+    await client.ws.is_ready.wait() 
     # Presence
     await client.actions.appearance.change_presence(
         status="dnd",

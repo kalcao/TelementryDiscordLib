@@ -75,12 +75,16 @@ class AddFriend:
             await science.submit()
             
             solver_url = "http://127.0.0.1:5001/solve"
+            
             params = {
                 "url": "https://discord.com",
                 "sitekey": captcha_sitekey,
                 "rqdata": captcha_rqdata,
-                "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+                "user_agent": self.client.user_agent
             }
+            
+            if self.client.proxy:
+                params['proxy'] = self.client.proxy
             solve_response = requests.get(solver_url, params=params)
             if solve_response.status_code != 200:
                 return {"success": False, "error": "Failed to start solver"}

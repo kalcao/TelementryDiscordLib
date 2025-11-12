@@ -13,10 +13,10 @@ class DiscordClient:
         self.proxy = proxy
         self.client_identity = {k: str(uuid.uuid4()) for k in ["client_launch_id", "launch_signature", "client_heartbeat_session_id"]}
         self.fingerprint = asdict(FingerprintGenerator().generate(browser=device_prop['browser'], os=device_prop['os']))
-        user_agent = self.fingerprint['navigator']['userAgent']
+        self.user_agent = self.fingerprint['navigator']['userAgent']
         self.browser_version = (self.fingerprint['navigator']['userAgentData']['brands'][-1]['version']
                                 if self.fingerprint['navigator'].get('userAgentData')
-                                else re.search(r'Firefox/([\d\.]+)', user_agent) and re.search(r'Firefox/([\d\.]+)', user_agent).group(1) or "0")
+                                else re.search(r'Firefox/([\d\.]+)', self.user_agent) and re.search(r'Firefox/([\d\.]+)', self.user_agent).group(1) or "0")
         self.session = tls_client.Session(client_identifier="chrome", random_tls_extension_order=True)
         self.session.headers = {**self.fingerprint['headers'], "Authorization": self.token, "x-debug-options": "bugReporterEnabled", 
                         "x-discord-locale": "en-US"}
@@ -30,7 +30,7 @@ class DiscordClient:
 
         self.properties = {
             "os": device_prop['os'], "browser": device_prop['browser'], "device": "", "system_locale": locale, "has_client_mods": True,
-            "browser_user_agent": user_agent, "browser_version": self.browser_version, "os_version": "10", "referrer": "", "referring_domain": "",
+            "browser_user_agent": self.user_agent, "browser_version": self.browser_version, "os_version": "10", "referrer": "", "referring_domain": "",
             "referrer_current": "", "referring_domain_current": "", "release_channel": "stable", "client_build_number": device_prop['client_build_number'],
             "client_event_source": None, **self.client_identity, "client_app_state": "focused"
         }

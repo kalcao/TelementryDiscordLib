@@ -14,6 +14,15 @@
 
 > 설마 오픈소스를 그대로 갖다파는 친구는 없길 바랍니다.
 
+## Video Demonstration
+상태 변경 - https://streamable.com/pw0t1h
+
+계정 생성 - https://streamable.com/t3mc84 (SOON! ⭐ please <3)
+
+서버 참가 - https://streamable.com/w42n0l
+
+뒷메 - https://streamable.com/l65heg (not sure if I will commit this)
+
 ## 위험한 행동
 
 | 행동                | 안전 |
@@ -32,7 +41,7 @@ from lib.client import DiscordClient
 async def main():
     client = DiscordClient("your_token")
     await client.init()
-
+    await client.ws.is_ready.wait()
     # 상태 변경
     await client.actions.appearance.change_presence(
         status="dnd", # online/dnd/offline
