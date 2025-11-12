@@ -8,8 +8,9 @@ from lib.actions import ActionsContainer
 from lib.science import SciencePayload, Client_UUID
 
 class DiscordClient:
-    def __init__(self, token: str, email="", password="", device_prop={"browser": "firefox", "os": "windows", "client_build_number": 459631}):
+    def __init__(self, token: str, email="", password="", proxy=None, device_prop={"browser": "firefox", "os": "windows", "client_build_number": 459631}):
         self.token, self.device_prop = token, device_prop
+        self.proxy = proxy
         self.client_identity = {k: str(uuid.uuid4()) for k in ["client_launch_id", "launch_signature", "client_heartbeat_session_id"]}
         self.fingerprint = asdict(FingerprintGenerator().generate(browser=device_prop['browser'], os=device_prop['os']))
         user_agent = self.fingerprint['navigator']['userAgent']
@@ -39,7 +40,15 @@ class DiscordClient:
         self.science = SciencePayload(self)
         
         self.actions = ActionsContainer(self)        
-        self._make_request = lambda method, url, **kwargs: asyncio.to_thread(lambda: getattr(self.session, method.lower())(url, headers={**kwargs.pop('headers', {})}, **kwargs))
+        self._make_request = lambda method, url, **kwargs: asyncio.to_thread(
+            lambda: getattr(self.session, method.lower())(
+                url,
+                headers={**kwargs.pop('headers', {})},
+                **({'proxy': self.proxy} if self.proxy is not None else {}),
+                **kwargs,
+            )
+        )
+
 
 
     @property
