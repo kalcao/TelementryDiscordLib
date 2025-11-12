@@ -1,11 +1,13 @@
 import asyncio
-import random
+import random, string
 import requests
 from flask import Flask, request
 import threading
 import platform
 import time
 from camoufox.async_api import AsyncCamoufox
+# from playwright.async_api import async_playwright
+# from playwright_stealth import stealth_async
 
 tasks = {}
 
@@ -22,10 +24,10 @@ HTML_TEMPLATE = """
 </html>
 """
 
-async def randomized_type(selector, text):
-    for char in text:
-        await asyncio.sleep(random.randint(50, 200) / 1000)
-        await selector.press_sequentially(char)
+# async def randomized_type(selector, text):
+#     for char in text:
+#         await asyncio.sleep(random.randint(50, 200) / 1000)
+#         await selector.press_sequentially(char)
 
 async def ask(direction, query):
     try:
@@ -105,24 +107,25 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
     try:
         print(f"init: {taskid}")
         browser_config = {
-            "headless": True,
-            "humanize": 0.2,
+            "headless": False,
+            "humanize": False,
             "block_webrtc": True,
-            "os": "macos"
+            "os": "windows"
         }
         if proxy_config:
             browser_config["proxy"] = proxy_config
             print(f"Using proxy for task {taskid}: {proxy_config['server']}")
 
         browser = await AsyncCamoufox(**browser_config).start()
+
         # playwright = await async_playwright().start()
-        # browser = await playwright.firefox.launch(headless=False)
+        # browser = await playwright.chromium.launch(headless=False)
 
         print(f"Browser started for task {taskid}")
         if user_agent: context = await browser.new_context(locale='ko-KR', user_agent=user_agent.replace("%20", " "))
         else: context = await browser.new_context(locale='ko-KR')
         page = await context.new_page()
-        
+        # await stealth_async(page)
         async def template_route(route):
             await route.fulfill(
                 status=200,
@@ -172,8 +175,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
                             last_q = q
                             a = await ask(direction, q)
                             await puzzle_ifr.locator("body > div > div.challenge-container > div > div > div.challenge-input > input").click()
-                            await randomized_type(puzzle_ifr.locator("body > div > div.challenge-container > div > div > div.challenge-input > input"), a)
-                            await page.wait_for_timeout(723)
+                            await puzzle_ifr.type("body > div > div.challenge-container > div > div > div.challenge-input > input", a)
                             await puzzle_ifr.locator(".button-submit").click()
                         else: 
                             await page.wait_for_timeout(500)
@@ -189,17 +191,17 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
             print(f"Puzzle setup error for task {taskid}: {e}")
 
         try:
-            uuid_result = await asyncio.wait_for(token_task, timeout=60)
+            uuid_result = await asyncio.wait_for(token_task, timeout=120)
         except asyncio.TimeoutError:
             print(f"timeout {taskid}")
-            tasks[taskid] = {"status": "failed", "uuid": None}
+            tasks[taskid] = {"status": "error", "uuid": None}
             uuid_result = None
 
     except Exception as e:
         print(f"Error in solve_hcaptcha_async for task {taskid}: {e}")
         import traceback
         traceback.print_exc()
-        tasks[taskid] = {"status": "failed", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None}
         uuid_result = None
     finally:
         if browser and tasks[taskid]["status"] != "success":
@@ -259,14 +261,14 @@ def solve():
     
     if loop is None or not loop.is_running():
         print(f"Event loop failed to start for task {taskid}")
-        tasks[taskid] = {"status": "failed", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None}
         return {"taskid": taskid, "error": "Event loop not available"}
     
     try:
         asyncio.run_coroutine_threadsafe(solve_hcaptcha_async(taskid, sitekey, url, rqdata=rqdata, user_agent=user_agent, proxy_config=proxy_config), loop)
     except Exception as e:
         print(f"Error scheduling task {taskid}: {e}")
-        tasks[taskid] = {"status": "failed", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None}
     return {"taskid": taskid}
 
 @app.route('/task/<taskid>', methods=['GET'])
