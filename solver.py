@@ -33,7 +33,7 @@ async def ask(direction, query):
     try:
         headers = {
             'Content-Type': 'application/json',
-            'Authorization': 'Bearer api_key_here',
+            'Authorization': 'Bearer api key',
         }
         json_data = {
             'messages': [
@@ -82,12 +82,14 @@ async def ask(direction, query):
     else:
         return "아니요"#메가가 좆밥일경우
 
-async def monitor_token(page, taskid, browser):
+async def monitor_token(page, taskid, browser, context):
     while True:
         try:
             token = await page.evaluate('() => document.querySelector("iframe[data-hcaptcha-response]")?.getAttribute("data-hcaptcha-response")')
             if token and "_" in token:
-                tasks[taskid] = {"status": "success", "uuid": token}
+                cookies = await context.cookies()
+                cookie_dict = {cookie['name']: cookie['value'] for cookie in cookies}
+                tasks[taskid] = {"status": "success", "uuid": token, "cookies": cookie_dict}
                 print(f"{token[:50]}...")
                 try:
                     await browser.close()
@@ -109,7 +111,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
         browser_config = {
             "headless": False,
             "humanize": False,
-            "block_webrtc": True,
+            "block_webrtc": False,
             "os": "windows"
         }
         if proxy_config:
@@ -136,7 +138,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
         async def hcaptcha_html_route(route):
             hcap_html = open("hcaptcha.html", "r", encoding="utf-8").read()
             if(rqdata):
-                hcap_html = hcap_html.replace("Vr = t", f'Vr = "{rqdata}"')
+                hcap_html = hcap_html.replace("Zr = t", f'Zr = "{rqdata}"')
             await route.fulfill(
                 status=200,
                 content_type='text/html',
@@ -156,7 +158,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
         
         await frame.locator("#checkbox").click()
         
-        token_task = asyncio.create_task(monitor_token(page, taskid, browser))
+        token_task = asyncio.create_task(monitor_token(page, taskid, browser, context))
         
         try:
             puzzle_element = await page.query_selector("body > div:nth-child(2) > div:nth-child(1) > iframe")
@@ -169,7 +171,7 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
                 attempts = 0
                 while attempts < 30:
                     try:
-                        direction = await puzzle_ifr.locator("#prompt > span").text_content()
+                        direction = await puzzle_ifr.locator(".prompt-text > span:nth-child(1)").text_content()
                         q = await puzzle_ifr.locator("#prompt-text > span").text_content()
                         if last_q != q:
                             last_q = q
@@ -194,14 +196,14 @@ async def solve_hcaptcha_async(taskid, sitekey, url, user_agent = None, rqdata =
             uuid_result = await asyncio.wait_for(token_task, timeout=120)
         except asyncio.TimeoutError:
             print(f"timeout {taskid}")
-            tasks[taskid] = {"status": "error", "uuid": None}
+            tasks[taskid] = {"status": "error", "uuid": None, "cookies": {}}
             uuid_result = None
 
     except Exception as e:
         print(f"Error in solve_hcaptcha_async for task {taskid}: {e}")
         import traceback
         traceback.print_exc()
-        tasks[taskid] = {"status": "error", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None, "cookies": {}}
         uuid_result = None
     finally:
         if browser and tasks[taskid]["status"] != "success":
@@ -250,7 +252,7 @@ def solve():
             proxy_config["password"] = pw
     
     taskid = ''.join(random.choices('abcdefghijklmnopqrstuvwxyz0123456789', k=5))
-    tasks[taskid] = {"status": "not_ready", "uuid": None}
+    tasks[taskid] = {"status": "not_ready", "uuid": None, "cookies": {}}
     
     max_wait = 50
     wait_count = 0
@@ -261,19 +263,19 @@ def solve():
     
     if loop is None or not loop.is_running():
         print(f"Event loop failed to start for task {taskid}")
-        tasks[taskid] = {"status": "error", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None, "cookies": {}}
         return {"taskid": taskid, "error": "Event loop not available"}
     
     try:
         asyncio.run_coroutine_threadsafe(solve_hcaptcha_async(taskid, sitekey, url, rqdata=rqdata, user_agent=user_agent, proxy_config=proxy_config), loop)
     except Exception as e:
         print(f"Error scheduling task {taskid}: {e}")
-        tasks[taskid] = {"status": "error", "uuid": None}
+        tasks[taskid] = {"status": "error", "uuid": None, "cookies": {}}
     return {"taskid": taskid}
 
 @app.route('/task/<taskid>', methods=['GET'])
 def check_task(taskid):
-    return tasks.get(taskid, {"status": "not_found", "uuid": None})
+    return tasks.get(taskid, {"status": "not_found", "uuid": None, "cookies": {}})
 
 def run_flask():
     app.run(host='0.0.0.0', port=5001, debug=False, use_reloader=False)
