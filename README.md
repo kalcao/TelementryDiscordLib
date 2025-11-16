@@ -79,6 +79,15 @@ asyncio.run(main())
 <details>
 <summary>View update history</summary>
 
+<details>
+<summary>2025-11-17</summary>
+    
+```diff
++ Applied fix for hCaptcha update
+````
+
+</details>
+
 
 <details>
 <summary>2025-11-03</summary>
