@@ -10,6 +10,10 @@
 
 Please ⭐ this repo so I get motivated working on this project! Otherwise I'll stop patching 😊
 
+```diff
+- hCaptcha updated in 25-11-16. I've applied a fix but please open issue if your token gets banned after request solving captcha.
+```
+
 > **Disclaimer**: Only for research/education only. **The author assumes no responsibility for any misuse, consequences, or account actions resulting from your use of this library.**
 
 > Don't sell this open-source project. Shame on you if you do.
