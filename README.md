@@ -141,6 +141,7 @@ if __name__ == "__main__":
 + Opening channel & Sending DM
 + Joining VC & Playing Soundboard
 + Phone verifying
++ Full Async support 
 ````
 
 </details>
