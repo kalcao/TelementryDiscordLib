@@ -7,12 +7,12 @@ class ProfileChanger:
         self.client = client
     
     async def change_profile(self, avatar=None, global_name=None, bio=None, pronouns=None, accent_color=None):
-        science = SciencePayload(self.client.ws)
+        science = SciencePayload(self.client)
         # Prepare the payload for profile update
         at_me = {}
         profile = {}
         if avatar is not None:
-            at_me['avatar'] = f"data:image/png;base64,{avatar}"
+            at_me['avatar'] = avatar if avatar.startswith("data:image/") else f"data:image/png;base64,{avatar}"
             at_me['avatar_description'] =  datetime.now().strftime("%B %d, %Y at %I:%M %p")
         if global_name is not None:
             at_me['global_name'] = global_name
@@ -115,7 +115,7 @@ class ProfileChanger:
 
         await science.submit()
 
-        print(at_me)
+        # print(at_me)
         at_me_res = await self.client._make_request("PATCH", 'https://discord.com/api/v9/users/@me', json=at_me)
         profile_res = await self.client._make_request("PATCH", 'https://discord.com/api/v9/users/@me/profile', json=profile)
 

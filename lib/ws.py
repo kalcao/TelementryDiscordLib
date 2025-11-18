@@ -24,7 +24,6 @@ class DiscordWS:
         impersonate = f"{browser}"
         self.async_session = AsyncSession(impersonate=impersonate)
         self.ws = await self.async_session.ws_connect("wss://gateway.discord.gg/?v=9&encoding=json")
-        print("WebSocket connection opened.")
         self.ws_connected = True
         self.handle_task = asyncio.create_task(self.handle_messages())
 
@@ -171,7 +170,15 @@ class DiscordWS:
                 await asyncio.wait_for(self.heartbeat_task, timeout=1.0)
             except (asyncio.CancelledError, asyncio.TimeoutError):
                 pass
-        
+
+        # Stop message handler before tearing down transports to avoid orphaned readers.
+        if self.handle_task and not self.handle_task.done():
+            self.handle_task.cancel()
+            try:
+                await asyncio.wait_for(self.handle_task, timeout=1.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+
         # Close WebSocket connection
         if self.ws:
             try:
@@ -180,12 +187,12 @@ class DiscordWS:
                 print(f"Error closing websocket: {e}")
 
         if self.async_session:
-            await self.async_session.close()
-        
-        # Cancel handle task
-        if self.handle_task and not self.handle_task.done():
-            self.handle_task.cancel()
+            acurl = getattr(self.async_session, "_acurl", None)
             try:
-                await asyncio.wait_for(self.handle_task, timeout=1.0)
-            except (asyncio.CancelledError, asyncio.TimeoutError):
-                pass
+                if acurl is not None:
+                    await self.async_session.close()
+                else:
+                    # Session never instantiated AsyncCurl, so avoid creating one during shutdown.
+                    self.async_session._closed = True
+            except Exception as e:
+                print(f"Error closing async session: {e}")

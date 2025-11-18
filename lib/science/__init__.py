@@ -59,7 +59,7 @@ class SciencePayload:
         self.client = client
         self.ws = client.ws
         # Try to get analytics token from ws_data first (which is where it's stored after WebSocket connection)
-        self.analytics_token = self.ws.ws_data.get('analytics_token')
+        self.analytics_token = getattr(self.ws, 'ws_data', {}).get('analytics_token')
         self.client_heartbeat_session_id = self.client.client_identity['client_heartbeat_session_id']
         self.launch_signature = self.client.client_identity['launch_signature']
         self.user_info = self.client.me.json() if hasattr(self.client.me, 'json') else self.client.me
@@ -70,10 +70,10 @@ class SciencePayload:
         self.event_sequence_number = 5 # libdiscore_loaded마다 초기화됨
 
     def reset(self):
-        self.analytics_token = self.ws.ws_data.get('analytics_token')
+        self.analytics_token = getattr(self.ws, 'ws_data', {}).get('analytics_token')
         self.event_sequence_number = 5 # Reset event sequence number
         visible_user_ids = []
-        private_channels = self.client.ws.ws_data.get('private_channels', [])
+        private_channels = getattr(self.client.ws, 'ws_data', {}).get('private_channels', [])
         for channel in private_channels:
             for recipient in channel.get('recipients', []):
                 user_id = recipient.get('id')
@@ -218,30 +218,32 @@ class SciencePayload:
     def add(self, type, external_properties={}):
         U = time.perf_counter()
         self.event_sequence_number += 1
+        properties = {
+            'client_track_timestamp': int(time.time() * 1000),
+            'client_heartbeat_session_id': self.client_heartbeat_session_id,
+            'event_sequence_number': self.event_sequence_number,
+            'success': True,
+            'experimental_features': [],
+            'client_performance_memory': 0,
+            'accessibility_features': 256, # 다크모드 https://docs.discord.food/reference#accessibility-feature-flags
+            'rendered_locale': self.locale,
+            'uptime_app': math.floor((time.perf_counter() - U)),
+            'client_uuid': self.uuid_gen.calculate(event_sequence_number=self.event_sequence_number),
+            'launch_signature': self.launch_signature,
+        }
+        if external_properties:
+            properties.update(external_properties)
+
         event = {
             'type': type,
-            'properties': {
-                'client_track_timestamp': int(time.time() * 1000),
-                'client_heartbeat_session_id': self.client_heartbeat_session_id,
-                'event_sequence_number': self.event_sequence_number,
-                'success': True,
-                'experimental_features': [],
-                'client_performance_memory': 0,
-                'accessibility_features': 256, # 다크모드 https://docs.discord.food/reference#accessibility-feature-flags
-                'rendered_locale': self.locale,
-                'uptime_app': math.floor((time.perf_counter() - U)),
-                'client_uuid': self.uuid_gen.calculate(event_sequence_number=self.event_sequence_number),
-                'launch_signature': self.launch_signature,
-                ** external_properties
-            },
+            'properties': properties,
         }
         self.events['events'].append(event)
-
     async def submit(self):
         timestamp = int(time.time() * 1000)
         # Update the analytics token just before submitting, in case it became available
         # after SciencePayload was initialized
-        latest_token = self.ws.ws_data.get('analytics_token', getattr(self.ws, 'analytics_token', getattr(self.client, 'analytics_token', 'default_token')))
+        latest_token = getattr(self.ws, 'ws_data', {}).get('analytics_token', getattr(self.ws, 'analytics_token', getattr(self.client, 'analytics_token', 'default_token')))
         self.analytics_token = latest_token
         self.events['token'] = self.analytics_token if self.analytics_token is not None else 'default_token'  # Update token in events
         
@@ -252,7 +254,6 @@ class SciencePayload:
         if self.analytics_token is not None and self.analytics_token != 'default_token':
             try:
                 # Access the async request from the client object through ws
-                print(self.events)
                 await self.client._make_request(
                     "POST",
                     "https://discord.com/api/v9/science", 

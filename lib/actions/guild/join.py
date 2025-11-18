@@ -3,6 +3,7 @@ import asyncio, base64
 from urllib.parse import quote
 import requests  # 추가: Flask 서버에 요청하기 위해
 from lib.science import SciencePayload
+from solver_client import Solver
 
 class JoinHandler:
     def __init__(self, client):
@@ -151,37 +152,13 @@ class JoinHandler:
             })
             await science.submit()
 
-            params = {
-                "url": "https://discord.com/app",
-                "sitekey": captcha_sitekey,
-                "rqdata": captcha_rqdata,
-                'user_agent': self.client.session.headers['User-Agent']
-            }
-            if self.client.proxy:
-                params['proxy'] = self.client.proxy
-
-            response = requests.get("http://localhost:5001/solve", params=params)
-            if response.status_code != 200:
-                return {"success": False, "error": "Failed to start solver task", "invite_code": invite_code}
-            
-            task_data = response.json()
-            taskid = task_data.get("taskid")
-            if not taskid:
-                return {"success": False, "error": "No task ID returned", "invite_code": invite_code}
-            
-            max_attempts = 60
-            attempt = 0
-            token = None
-            while attempt < max_attempts:
-                await asyncio.sleep(1)
-                status_res = requests.get(f"http://localhost:5001/task/{taskid}")
-                status_data = status_res.json()
-                if status_data.get("status") == "success":
-                    token = status_data.get("uuid")
-                    break
-                elif status_data.get("status") == "failed":
-                    return {"success": False, "error": "Solver failed", "invite_code": invite_code}
-                attempt += 1
+            solver = Solver(
+                url="https://discord.com",
+                sitekey=captcha_sitekey,
+                rqdata=captcha_rqdata,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+            )
+            token, _ = solver.solve()
             
             if not token:
                 return {"success": False, "error": "Failed to solve captcha", "invite_code": invite_code}

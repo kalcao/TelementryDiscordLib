@@ -78,7 +78,7 @@ class GuildScraper:
             else:
                 self.members[user_id] = member_data
             
-            print(f"{member_data['tag']} ({user_id})")
+            # print(f"{member_data['tag']} ({user_id})")
 
     async def handle_ready(self, message: Dict):
         for guild in message.get("d", {}).get("guilds", []):
@@ -128,7 +128,7 @@ class GuildScraper:
                     self.end_scraping = True
             
             if self.end_scraping and not self.completed_printed:
-                print(f"Scraping completed. Found {len(self.members)} members.")
+                # print(f"Scraping completed. Found {len(self.members)} members.")
                 self.completed_printed = True
                 
         except KeyError as e:

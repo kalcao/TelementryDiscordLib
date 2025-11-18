@@ -1,6 +1,7 @@
 import json, uuid, base64, asyncio, time
-import requests  # Added for making HTTP requests to the Flask solver
+import requests
 from lib.science import SciencePayload
+from solver_client import Solver
 
 class AddFriend:
     def __init__(self, client):
@@ -34,7 +35,7 @@ class AddFriend:
                     "has_images": False,
                     "is_friend": False,
                     "location_object": "Context Menu",
-                    "other_user_id": "1056074845974188154",
+                    "other_user_id": None,
                     "party_platform": None,
                     "profile_has_nitro_customization": False,
                     "profile_user_status": "online-desktop",
@@ -74,41 +75,13 @@ class AddFriend:
             })
             await science.submit()
             
-            solver_url = "http://127.0.0.1:5001/solve"
-            
-            params = {
-                "url": "https://discord.com",
-                "sitekey": captcha_sitekey,
-                "rqdata": captcha_rqdata,
-                "user_agent": self.client.user_agent
-            }
-            
-            if self.client.proxy:
-                params['proxy'] = self.client.proxy
-            solve_response = requests.get(solver_url, params=params)
-            if solve_response.status_code != 200:
-                return {"success": False, "error": "Failed to start solver"}
-            
-            task_data = solve_response.json()
-            taskid = task_data.get("taskid")
-            if not taskid:
-                return {"success": False, "error": "No task ID from solver"}
-            
-            # Poll for task completion
-            check_url = f"http://127.0.0.1:5001/task/{taskid}"
-            max_attempts = 60  # Adjust timeout as needed
-            for _ in range(max_attempts):
-                check_response = requests.get(check_url)
-                check_data = check_response.json()
-                status = check_data.get("status")
-                if status == "success":
-                    token = check_data.get("uuid")
-                    break
-                elif status == "failed":
-                    return {"success": False, "error": "Solver failed"}
-                await asyncio.sleep(1) 
-            else:
-                return {"success": False, "error": "Solver timeout"}
+            solver = Solver(
+                url="https://discord.com",
+                sitekey=captcha_sitekey,
+                rqdata=captcha_rqdata,
+                user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0"
+            )
+            token, _ = solver.solve()
             
             if not token:
                 return {"success": False, "error": "Failed to solve captcha"}
