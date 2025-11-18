@@ -21,21 +21,25 @@ Please ⭐ this repo so I get motivated working on this project! Otherwise I'll 
 ## Video Demonstration
 Presence change - https://streamable.com/pw0t1h
 
-Account Creation - https://streamable.com/t3mc84 (SOON! ⭐ please <3)
-
 Server joining - https://streamable.com/w42n0l
 
-Sending DM - https://streamable.com/l65heg (not sure if I will commit this)
+Sending DM - https://streamable.com/l65heg
+
+VC Joining & Playing Soundboard - https://streamable.com/szxmll
 
 ## Risky Actions
 
-| Action             | Safe |
-|--------------------|------|
-| **Presence Updates** | ✅ |
-| **Profile Edits**  | ✅ |
-| **Guild Joins**    | ✅ |
-| **Member Scraping**| ✅ |
-| **Add Friend**     | ✅ |
+| Actions                              | Is Safe |
+|----------------------------------------|------|
+| **Presence Updates**                    | ✅ |
+| **Profile Edits**                       | ✅ |
+| **Guild Joins**                         | ✅ |
+| **Member Scraping**                     | ✅ |
+| **Add Friend**                          | ✅ |
+| **Sending DMs**                         | ✅ |
+| **Joining VC & Playing Soundboard**     | ✅ |
+| **Verifying Tokens with phone numbers** | ✅ |
+
 
 ## Usage
 
