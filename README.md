@@ -35,8 +35,8 @@ VC Joining & Playing Soundboard - https://streamable.com/szxmll
 | **Profile Edits**                       | ✅ |
 | **Guild Joins**                         | ✅ |
 | **Member Scraping**                     | ✅ |
-| **Add Friend**                          | X |
-| **Sending DMs**                         | ✅ |
+| **Add Friend**                          | ✅ |
+| **Sending DMs**                         | X |
 | **Joining VC & Playing Soundboard**     | ✅ |
 | **Verifying Tokens with phone numbers** | ✅ |
 
