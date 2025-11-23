@@ -40,6 +40,10 @@ VC Joining & Playing Soundboard - https://streamable.com/szxmll
 | **Joining VC & Playing Soundboard**     | ✅ |
 | **Verifying Tokens with phone numbers** | ✅ |
 
+For about sending DMs, with text captcha you're only able to send max 2 dms.
+To fix that you need image captcha solver. 
+
+If someone can contribute on it, please add me `inxtagram` ;)
 
 ## Usage
 
