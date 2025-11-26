@@ -27,6 +27,8 @@ Sending DM - https://streamable.com/l65heg
 
 VC Joining & Playing Soundboard - https://streamable.com/szxmll
 
+Verifying email - https://streamable.com/ocebxb
+
 ## Risky Actions
 
 | Actions                              | Is Safe |
@@ -38,6 +40,7 @@ VC Joining & Playing Soundboard - https://streamable.com/szxmll
 | **Add Friend**                          | ✅ |
 | **Sending DMs**                         | X |
 | **Joining VC & Playing Soundboard**     | ✅ |
+| **Verifying Tokens with email**         | ✅ |
 | **Verifying Tokens with phone numbers** | ✅ |
 
 For about sending DMs, with text captcha you're only able to send max 2 dms.
