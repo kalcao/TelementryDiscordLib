@@ -8,7 +8,7 @@
 
 **TelementryDiscordLib** sends telementry data to discord in order to avoid being flagged.
 
-Please ⭐ this repo so I get motivated working on this project! Otherwise I'll stop patching 😊
+Please star this repo so I get motivated working on this project ;)
 
 ```diff
 - hCaptcha updated in 25-11-16. I've applied a fix but please open issue if your token gets banned after request solving captcha.
