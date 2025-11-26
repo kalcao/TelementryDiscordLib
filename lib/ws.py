@@ -196,3 +196,229 @@ class DiscordWS:
                     self.async_session._closed = True
             except Exception as e:
                 print(f"Error closing async session: {e}")
+
+
+class DiscordVoiceWS:
+    """Discord Voice Gateway WebSocket handler with heartbeating support."""
+    
+    def __init__(self, client):
+        self.client = client
+        self.ws = None
+        self.async_session = None
+        self.ws_connected = False
+        self.heartbeat_interval = None
+        self.heartbeat_task = None
+        self.handle_task = None
+        self._closing = False
+        self.ssrc = None
+        self.ip = None
+        self.port = None
+        self.modes = None
+        self.seq_ack = None  # Sequence number of last numbered message (v8+)
+
+    async def connect(self, endpoint, token, server_id, user_id, session_id):
+        """Connect to the Discord Voice Gateway.
+        
+        Args:
+            endpoint: Voice server endpoint (e.g., "germany123.discord.media")
+            token: Voice token from VOICE_SERVER_UPDATE
+            server_id: Guild ID
+            user_id: Bot's user ID
+            session_id: Session ID from VOICE_STATE_UPDATE
+        """
+        # Clean endpoint
+        if endpoint.startswith("wss://"):
+            endpoint = endpoint[6:]
+        if endpoint.startswith("http://"):
+            endpoint = endpoint[7:]
+        if ":" in endpoint:
+            endpoint = endpoint.split(":")[0]
+
+        url = f"wss://{endpoint}/?v=8&encoding=json"
+        
+        # Use browser impersonation from client
+        browser = self.client.device_prop['browser']
+        impersonate = f"{browser}"
+        
+        self.async_session = AsyncSession(impersonate=impersonate)
+        
+        try:
+            self.ws = await self.async_session.ws_connect(url)
+            self.ws_connected = True
+            self.handle_task = asyncio.create_task(self.handle_messages())
+            
+            # Send Opcode 0 Identify
+            await self.identify(server_id, user_id, session_id, token)
+            
+        except Exception as e:
+            print(f"[Voice] Connection failed: {e}")
+            await self.close()
+
+    async def identify(self, server_id, user_id, session_id, token):
+        """Send Opcode 0 Identify to the Voice Gateway."""
+        payload = {
+            "op": 0,
+            "d": {
+                "server_id": str(server_id),
+                "user_id": str(user_id),
+                "session_id": session_id,
+                "token": token
+            }
+        }
+        await self.send_json(payload)
+
+    async def handle_messages(self):
+        """Main message handling loop."""
+        try:
+            async for message in self.ws:
+                if self._closing:
+                    break
+                await self.handle_message(message)
+        except Exception as e:
+            print(f"[Voice] WebSocket closed or error: {e}")
+            await self.close()
+
+    async def handle_message(self, message):
+        """Process a single WebSocket message."""
+        try:
+            if isinstance(message, bytes):
+                message = message.decode('utf-8')
+            data = json.loads(message)
+            await self.process_message(data)
+        except json.JSONDecodeError:
+            print(f"[Voice] Failed to decode JSON: {message}")
+        except Exception as e:
+            print(f"[Voice] Error processing message: {e}")
+
+    async def process_message(self, data):
+        """Process incoming Voice Gateway opcodes.
+        
+        Handles:
+        - Opcode 8 (Hello): Extract heartbeat_interval and start heartbeating
+        - Opcode 2 (Ready): Store connection details (ssrc, ip, port, modes)
+        - Opcode 6 (Heartbeat ACK): Log acknowledgment
+        - Opcode 3 (Heartbeat): Immediate heartbeat request from server
+        """
+        op = data.get('op')
+        d = data.get('d')
+        
+        # Track sequence numbers for v8+ heartbeating
+        if 'seq' in data:
+            self.seq_ack = data['seq']
+        
+        if op == 8:  # Hello
+            self.heartbeat_interval = d['heartbeat_interval']
+            print(f"[Voice] Received Hello. Interval: {self.heartbeat_interval}ms, Version: {d.get('v', 'unknown')}")
+            
+            # Start heartbeat loop
+            if self.heartbeat_task:
+                self.heartbeat_task.cancel()
+            self.heartbeat_task = asyncio.create_task(self.heartbeat())
+            
+        elif op == 2:  # Ready
+            print("[Voice] Ready")
+            self.ssrc = d.get('ssrc')
+            self.ip = d.get('ip')
+            self.port = d.get('port')
+            self.modes = d.get('modes')
+            
+        elif op == 6:  # Heartbeat ACK
+            print(f"[Voice] Heartbeat ACK received: {d}")
+            
+        elif op == 3:  # Heartbeat (server requesting immediate heartbeat)
+            print("[Voice] Server requested immediate heartbeat")
+            await self.send_heartbeat_now()
+            
+        elif op == 9:  # Resumed
+            print("[Voice] Connection resumed")
+
+    async def heartbeat(self):
+        """Heartbeat loop that sends Opcode 3 at the specified interval.
+        
+        As per Discord docs:
+        - Web client uses: min(heartbeat_interval, 5000) for v4+
+        - Desktop client uses: heartbeat_interval for v4+
+        
+        We use the desktop client behavior (raw interval) for stability.
+        """
+        print("[Voice] Starting heartbeat loop")
+        while self.ws_connected and not self._closing:
+            try:
+                interval = self.heartbeat_interval
+                
+                await asyncio.sleep(interval / 1000)
+                
+                if self.ws and not self._closing:
+                    await self.send_heartbeat_now()
+                    
+            except asyncio.CancelledError:
+                break
+            except Exception as e:
+                print(f"[Voice] Error in heartbeat: {e}")
+                break
+
+    async def send_heartbeat_now(self):
+        """Send Opcode 3 Heartbeat immediately.
+        
+        Heartbeat structure (v8+):
+        {
+            "op": 3,
+            "d": {
+                "t": <current unix timestamp in ms>,
+                "seq_ack": <last received sequence number>
+            }
+        }
+        """
+        import time
+        nonce = int(time.time() * 1000)
+        payload = {
+            "op": 3,
+            "d": {
+                "t": nonce,
+                "seq_ack": self.seq_ack
+            }
+        }
+        await self.send_json(payload)
+        print(f"[Voice] Sent Heartbeat: nonce={nonce}, seq_ack={self.seq_ack}")
+
+    async def send_json(self, data):
+        """Send JSON data over the WebSocket."""
+        if self.ws and self.ws_connected:
+            await self.ws.send_str(json.dumps(data))
+
+    async def close(self):
+        """Close the Voice Gateway connection and cleanup."""
+        if self._closing:
+            return
+        self._closing = True
+        self.ws_connected = False
+        
+        if self.heartbeat_task and not self.heartbeat_task.done():
+            self.heartbeat_task.cancel()
+            try:
+                await asyncio.wait_for(self.heartbeat_task, timeout=1.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+            
+        if self.handle_task and not self.handle_task.done():
+            self.handle_task.cancel()
+            try:
+                await asyncio.wait_for(self.handle_task, timeout=1.0)
+            except (asyncio.CancelledError, asyncio.TimeoutError):
+                pass
+            
+        if self.ws:
+            try:
+                await self.ws.close()
+            except Exception as e:
+                print(f"[Voice] Error closing websocket: {e}")
+                
+        if self.async_session:
+            acurl = getattr(self.async_session, "_acurl", None)
+            try:
+                if acurl is not None:
+                    await self.async_session.close()
+                else:
+                    self.async_session._closed = True
+            except Exception as e:
+                print(f"[Voice] Error closing async session: {e}")
