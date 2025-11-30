@@ -18,6 +18,8 @@ Please star this repo so I get motivated working on this project ;)
 
 > Don't sell this open-source project. Shame on you if you do.
 
+Support Server: https://discord.gg/QgwXTzw6yJ
+
 ## Video Demonstration
 Presence change - https://streamable.com/pw0t1h
 
