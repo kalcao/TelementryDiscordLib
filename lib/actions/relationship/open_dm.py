@@ -89,6 +89,7 @@ class OpenChannel:
 
         await self.science.submit()
         res = await self.client._make_request("POST", 'https://discord.com/api/v9/users/@me/channels', 
-                                            json={"recipient_id": user_id})
+                                            json={"recipient_id": user_id},
+                                            headers={"origin": "https://discord.com"})  # POST 요청이므로 Origin 포함
 
         return res.json()

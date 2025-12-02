@@ -23,7 +23,7 @@ class SendMessage:
         self.client = client
         self.science = self.client.science
 
-    async def send_messages(self, channel_id: str, content: str, guild_id: Optional[str] = None, sending_dm_for_first: bool = False, reply: Optional[Dict] = None):
+    async def send_messages(self, channel_id: str, content: str, guild_id: Optional[str] = None):
         """
         Send a message to the specified channel. If Discord responds with an hCaptcha
         challenge, reuse the local solver (http://localhost:5001) just like the join flow,
@@ -33,7 +33,7 @@ class SendMessage:
         await self._track_channel_open(guild_id, channel_id)
 
         context_headers = self._build_context_headers(guild_id, channel_id)
-        response = await self._send(channel_id, content, headers=context_headers, guild_id=guild_id, sending_dm_for_first=sending_dm_for_first, reply=reply)
+        response = await self._send(channel_id, content, headers=context_headers)
         if response.status_code in (200, 201):
             return response.json()
 
@@ -43,7 +43,7 @@ class SendMessage:
             and isinstance(captcha_payload, dict)
             and captcha_payload.get("captcha_key")
         ):
-            captcha_token = await self._solve_captcha(captcha_payload, guild_id=guild_id)
+            captcha_token = await self._solve_captcha(captcha_payload)
             if not captcha_token:
                 raise Exception("Captcha required but solver did not return a token")
 
@@ -51,7 +51,7 @@ class SendMessage:
                 **context_headers,
                 **self._build_captcha_headers(captcha_payload, captcha_token),
             }
-            retry_response = await self._send(channel_id, content, headers=retry_headers, guild_id=guild_id, sending_dm_for_first=sending_dm_for_first, reply=reply)
+            retry_response = await self._send(channel_id, content, headers=retry_headers)
             if retry_response.status_code in (200, 201):
                 return retry_response.json()
 
@@ -79,7 +79,7 @@ class SendMessage:
         })
         await self.science.submit()
 
-    async def _send(self, channel_id: str, content: str, headers: Optional[Dict[str, str]] = None, guild_id: Optional[str] = None, sending_dm_for_first: Optional[bool] = False, reply: Optional[Dict] = None):
+    async def _send(self, channel_id: str, content: str, headers: Optional[Dict[str, str]] = None):
         payload = {
             "mobile_network_type": "unknown",
             "content": content,
@@ -87,12 +87,6 @@ class SendMessage:
             "tts": False,
             "flags": 0,
         }
-        if reply:
-            payload["message_reference"] = reply
-            payload["allowed_mentions"] = {
-                "parse": ["users", "roles", "everyone"],
-                "replied_user": False
-            }
         merged_headers = dict(headers or {})
         res = await self.client._make_request(
             "POST",
@@ -100,47 +94,43 @@ class SendMessage:
             json=payload,
             headers=merged_headers,
         )
-        
-        if guild_id:
-            return res
-        
-        if sending_dm_for_first:
-            self.science.add('friends_list_viewed', external_properties={
-                "tab_opened": "ADD_FRIEND",
+        self.science.add('friends_list_viewed', external_properties={
+            "tab_opened": "ADD_FRIEND",
+            "client_performance_memory": 0,
+            "accessibility_features": 524544,
+            "accessibility_support_enabled": False
+        })
+        await self.science.submit()
+        for i in range(5):
+            self.science.add('premium_feature_tutorial_steps', external_properties={
+                "location_stack": [
+                    "guild header"
+                ],
+                "tutorial_step": "server_boost_tutorial_started",
                 "client_performance_memory": 0,
                 "accessibility_features": 524544,
                 "accessibility_support_enabled": False
             })
+
+            self.science.add('dm_list_viewed', external_properties={
+                "num_users_visible": 1,
+                "num_users_visible_with_mobile_indicator": 0,
+                "channel_id": channel_id,
+                "channel_type": 1,
+                "channel_size_total": 1,
+                "channel_member_perms": "0",
+                "channel_hidden": False,
+                "client_performance_memory": 0,
+                "accessibility_features": 524544,
+                "rendered_locale": "en-US",
+                "accessibility_support_enabled": False
+            })
+
             await self.science.submit()
-            for i in range(5):
-                self.science.add('premium_feature_tutorial_steps', external_properties={
-                    "location_stack": [
-                        "guild header"
-                    ],
-                    "tutorial_step": "server_boost_tutorial_started",
-                    "client_performance_memory": 0,
-                    "accessibility_features": 524544,
-                    "accessibility_support_enabled": False
-                })
-
-                self.science.add('dm_list_viewed', external_properties={
-                    "num_users_visible": 1,
-                    "num_users_visible_with_mobile_indicator": 0,
-                    "channel_id": channel_id,
-                    "channel_type": 1,
-                    "channel_size_total": 1,
-                    "channel_member_perms": "0",
-                    "channel_hidden": False,
-                    "client_performance_memory": 0,
-                    "accessibility_features": 524544,
-                    "rendered_locale": "en-US",
-                    "accessibility_support_enabled": False
-                })
-
-                await self.science.submit()
+            await asyncio.sleep(0.3)
         return res
 
-    async def _solve_captcha(self, captcha_payload: Dict, guild_id: Optional[str] = None) -> str:
+    async def _solve_captcha(self, captcha_payload: Dict) -> str:
         captcha_sitekey = captcha_payload.get("captcha_sitekey")
         captcha_rqdata = captcha_payload.get("captcha_rqdata")
         captcha_rqtoken = captcha_payload.get("captcha_rqtoken")
@@ -165,11 +155,11 @@ class SendMessage:
             url="https://discord.com/",
             sitekey=captcha_sitekey,
             rqdata=captcha_rqdata,
-            user_agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:144.0) Gecko/20100101 Firefox/144.0",
+            user_agent=self.client.session.headers.get("user-agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:142.0) Gecko/20100101 Firefox/142.0"),
         )
         token, _ = solver.solve()
 
-        if token and not guild_id:
+        if token:
             self.science.add(
                 "captcha_event",
                 {
@@ -201,9 +191,12 @@ class SendMessage:
         }
         filtered = {k: v for k, v in context.items() if v is not None}
         if not filtered:
-            return {}
+            return {"origin": "https://discord.com"}  # POST 요청이므로 Origin 추가
         encoded = base64.b64encode(json.dumps(filtered).encode()).decode()
-        return {"X-Context-Properties": encoded}
+        return {
+            "X-Context-Properties": encoded,
+            "origin": "https://discord.com"  # POST 요청이므로 Origin 추가
+        }
 
     @staticmethod
     def _safe_json(response):

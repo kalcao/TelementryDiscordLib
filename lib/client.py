@@ -12,9 +12,6 @@ class DiscordClient:
         self.token, self.device_prop = token, device_prop
         self.proxy = proxy
 
-        self.email = email
-        self.password = password
-
         self.client_identity = {k: str(uuid.uuid4()) for k in ["client_launch_id", "launch_signature", "client_heartbeat_session_id"]}
         self.fingerprint = asdict(FingerprintGenerator().generate(browser=device_prop['browser'], os=device_prop['os']))
         user_agent = self.fingerprint['navigator']['userAgent']
@@ -63,7 +60,3 @@ class DiscordClient:
             await self.ws.close()
 
     def run(self): import asyncio; asyncio.run(self.init())
-
-def on_message(func):
-    func.is_message_handler = True
-    return func

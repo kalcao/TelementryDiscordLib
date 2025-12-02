@@ -104,11 +104,9 @@ class MiscActions:
         channel_id: str,
         content: str,
         guild_id=None,
-        reply=None,
     ):
         return await self._send_message_handler.send_messages(
             guild_id=guild_id,
             channel_id=channel_id,
             content=content,
-            reply=reply,
         )

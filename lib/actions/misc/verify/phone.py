@@ -9,7 +9,7 @@ class PhoneVerify:
 
     async def add(self, phone_number: str):
         client_heartbeat_session_id = self.client.client_identity['client_heartbeat_session_id']
-
+        phone_number = "+"+phone_number
         locked_res = (await self.client._make_request("GET", "https://discord.com/api/v9/content-inventory/users/@me?for_game_profile=false&feature=inbox")).status_code
         if locked_res == 403: self.locked = True 
         else: self.locked = False
@@ -18,6 +18,7 @@ class PhoneVerify:
             "phone":phone_number,
             "change_phone_reason":"user_action_required" if self.locked else "user_settings_update"
         })
+        print(add_res)
         if add_res.status_code == 204:
             return {"success": True, "phone": phone_number, "res": add_res}
         
@@ -56,7 +57,7 @@ class PhoneVerify:
         })
 
         await self.client.science.submit()
-
+        print(self.client.proxy)
         solver = Solver(
             url="https://discord.com/channels/@me",
             sitekey=add_res.json().get("captcha_sitekey"),
@@ -74,12 +75,14 @@ class PhoneVerify:
             "X-Captcha-Rqtoken": add_res.json().get("captcha_rqtoken"),
             'X-Captcha-Session-Id': add_res.json().get("captcha_session_id")
         })
-
+        print(add_res.status_code)
+        print(add_res.text)
         if(add_res.status_code != 204): 
             return {"success": False, "phone": phone_number, "res": add_res.json()}
         
         return {"success": True, "phone": phone_number, "res": add_res}
     async def verify(self, phone_number: str, code: str, password: str):
+        phone_number = "+"+phone_number
         client_heartbeat_session_id = self.client.client_identity['client_heartbeat_session_id']
 
         verify_token_res = await self.client._make_request("POST", "https://discord.com/api/v9/phone-verifications/verify", json={
